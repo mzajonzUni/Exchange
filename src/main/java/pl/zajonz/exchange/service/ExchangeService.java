@@ -1,9 +1,9 @@
 package pl.zajonz.exchange.service;
 
-import pl.zajonz.exchange.model.TestModel;
+import pl.zajonz.exchange.model.AvailableCurrencies;
 
 public interface ExchangeService {
 
-    TestModel test();
+    AvailableCurrencies getAllCurrencies();
 
 }
