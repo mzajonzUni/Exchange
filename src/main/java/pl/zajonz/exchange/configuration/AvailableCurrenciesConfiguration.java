@@ -10,7 +10,7 @@ import pl.zajonz.exchange.model.AvailableCurrencies;
 public class AvailableCurrenciesConfiguration {
 
     @Bean
-    public AvailableCurrencies availableCurrencies(ExchangeApiClient client, ExchangeApiProperties properties) {
-        return client.getCurrencies(properties.getApiKey());
+    public AvailableCurrencies availableCurrencies(ExchangeApiClient client) {
+        return client.getCurrencies();
     }
 }

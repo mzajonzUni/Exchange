@@ -1,20 +1,17 @@
 package pl.zajonz.exchange.client;
 
-import feign.Headers;
 import feign.Param;
 import feign.RequestLine;
 import pl.zajonz.exchange.model.AvailableCurrencies;
+import pl.zajonz.exchange.model.CurrencyExchange;
 
 public interface ExchangeApiClient {
 
     @RequestLine("GET /symbols")
-    @Headers("apikey: {apiKey}")
-    AvailableCurrencies getCurrencies(@Param("apiKey") String apiKey);
+    AvailableCurrencies getCurrencies();
 
-//    @RequestLine("GET")
-//    List<BookResource> findAll();
-//
-//    @RequestLine("POST")
-//    @Headers("Content-Type: application/json")
-//    void create(Book book);
+    @RequestLine("GET /convert?from={from}&to={to}&amount={amount}")
+    CurrencyExchange exchangeCurrency(@Param("from") String from, @Param("to") String to, @Param("amount") String amount);
 }
+
+// kowalki733 / kowalki733!@#
