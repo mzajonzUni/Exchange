@@ -1,12 +1,13 @@
 package pl.zajonz.exchange.controller;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import pl.zajonz.exchange.model.AvailableCurrencies;
 import pl.zajonz.exchange.model.CurrencyExchange;
 import pl.zajonz.exchange.model.command.CurrencyExchangeCommand;
 import pl.zajonz.exchange.service.ExchangeService;
+
+import javax.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor

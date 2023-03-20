@@ -14,6 +14,8 @@ public class ExchangeServiceImpl implements ExchangeService {
     private final AvailableCurrencies availableCurrencies;
     private final ExchangeApiClient exchangeApiClient;
 
+    private final EmailServiceImpl emailService;
+
     @Override
     public AvailableCurrencies getAllCurrencies() {
         return availableCurrencies;
@@ -21,6 +23,7 @@ public class ExchangeServiceImpl implements ExchangeService {
 
     @Override
     public CurrencyExchange exchangeCurrency(CurrencyExchangeCommand command) {
+        emailService.sendSimpleMessage("bartekciura87@gmail.com", "Test", "Turbo");
         return exchangeApiClient.exchangeCurrency(command.getFrom(), command.getTo(), command.getAmount());
     }
 }

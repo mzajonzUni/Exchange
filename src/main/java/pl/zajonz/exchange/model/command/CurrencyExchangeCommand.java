@@ -1,8 +1,9 @@
 package pl.zajonz.exchange.model.command;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import pl.zajonz.exchange.constraint.CurrencyConstraint;
+
+import javax.validation.constraints.NotBlank;
 
 @Data
 public class CurrencyExchangeCommand {

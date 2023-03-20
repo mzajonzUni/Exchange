@@ -1,9 +1,10 @@
 package pl.zajonz.exchange.constraint;
 
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorContext;
 import lombok.RequiredArgsConstructor;
 import pl.zajonz.exchange.model.AvailableCurrencies;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
 
 @RequiredArgsConstructor
 public class CurrencyValidator implements ConstraintValidator<CurrencyConstraint, String> {

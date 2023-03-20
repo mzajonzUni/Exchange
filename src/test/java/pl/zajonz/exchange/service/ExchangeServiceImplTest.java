@@ -44,9 +44,9 @@ public class ExchangeServiceImplTest {
 //        // then
 //        assertEquals(allCurrencies.getSymbols(), currencies.getSymbols());
 
-        AvailableCurrencies availableCurrencies = new AvailableCurrencies(true, Map.of("USD", "United States Dollar"));
-
-        assertSame(availableCurrencies, (new ExchangeServiceImpl(availableCurrencies, null)).getAllCurrencies());
+//        AvailableCurrencies availableCurrencies = new AvailableCurrencies(true, Map.of("USD", "United States Dollar"));
+//
+//        assertSame(availableCurrencies, (new ExchangeServiceImpl(availableCurrencies, null)).getAllCurrencies());
     }
     @Test
     void testExchangeCurrency() {

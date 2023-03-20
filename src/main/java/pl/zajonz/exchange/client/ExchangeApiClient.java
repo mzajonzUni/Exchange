@@ -13,3 +13,5 @@ public interface ExchangeApiClient {
     @RequestLine("GET /convert?from={from}&to={to}&amount={amount}")
     CurrencyExchange exchangeCurrency(@Param("from") String from, @Param("to") String to, @Param("amount") String amount);
 }
+
+// kowalki733 / kowalki733!@#
