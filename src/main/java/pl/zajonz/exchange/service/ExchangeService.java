@@ -8,4 +8,5 @@ public interface ExchangeService {
 
     AvailableCurrencies getAllCurrencies();
     CurrencyExchange exchangeCurrency(CurrencyExchangeCommand command);
+    CurrencyExchange exchangeSend(String email, CurrencyExchangeCommand command);
 }

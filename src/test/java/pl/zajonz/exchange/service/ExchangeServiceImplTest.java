@@ -1,71 +1,92 @@
 package pl.zajonz.exchange.service;
 
-import java.time.LocalDate;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.context.ContextConfiguration;
+import org.springframework.mail.SimpleMailMessage;
 import pl.zajonz.exchange.client.ExchangeApiClient;
 import pl.zajonz.exchange.model.AvailableCurrencies;
-
-import java.util.Map;
-
 import pl.zajonz.exchange.model.CurrencyExchange;
 import pl.zajonz.exchange.model.command.CurrencyExchangeCommand;
 
-@ContextConfiguration(classes = {ExchangeServiceImpl.class})
+import java.time.LocalDate;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 @ExtendWith(MockitoExtension.class)
 public class ExchangeServiceImplTest {
 
     @InjectMocks
     private ExchangeServiceImpl exchangeService;
     @Mock
-    private AvailableCurrencies availableCurrencies;
-    @Mock
     private ExchangeApiClient exchangeApiClient;
+    @Mock
+    private EmailServiceImpl emailService;
 
     @Test
-    void getAllCurrencies() {
-//        // given
-//        AvailableCurrencies allCurrencies = new AvailableCurrencies(true, Map.of("USD", "United States Dollar"));
-//
-//        // when
-//        AvailableCurrencies currencies = exchangeService.getAllCurrencies();
-//
-//        // then
-//        assertEquals(allCurrencies.getSymbols(), currencies.getSymbols());
+    void testGetAllCurrencies() {
+        //given
+        Map<String, String> currencies = Map.of("PLN", "Poland", "EUR", "Euro");
+        AvailableCurrencies availableCurr = new AvailableCurrencies(true, currencies);
 
-//        AvailableCurrencies availableCurrencies = new AvailableCurrencies(true, Map.of("USD", "United States Dollar"));
-//
-//        assertSame(availableCurrencies, (new ExchangeServiceImpl(availableCurrencies, null)).getAllCurrencies());
+        //when
+        AvailableCurrencies returned = exchangeService.getAllCurrencies();
+
+        //then
+        assertEquals(availableCurr.getSymbols(), returned.getSymbols());
     }
+
     @Test
     void testExchangeCurrency() {
-        // given
-        CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(), 200.00,
-                new CurrencyExchange.CurrencyExchangeInfo(10L, 2.00));
+        //given
+        CurrencyExchangeCommand command = new CurrencyExchangeCommand();
+        command.setFrom("EUR");
+        command.setTo("PLN");
+        command.setAmount("100");
+        CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(),
+                null, 400, null);
 
-        when(exchangeApiClient.exchangeCurrency(any(), any(), any())).thenReturn(currencyExchange);
+        when(exchangeApiClient.exchangeCurrency(any(String.class), any(String.class),
+                any(String.class))).thenReturn(currencyExchange);
 
-        CurrencyExchangeCommand currencyExchangeCommand = new CurrencyExchangeCommand();
-        currencyExchangeCommand.setAmount("100");
-        currencyExchangeCommand.setFrom("PLN");
-        currencyExchangeCommand.setTo("USD");
+        //when
+        CurrencyExchange returned = exchangeService.exchangeCurrency(command);
 
-        // when
-        CurrencyExchange currencyExchangeResult = exchangeService.exchangeCurrency(currencyExchangeCommand);
+        //then
+        assertEquals(currencyExchange.getResult(), returned.getResult());
+    }
 
-        // then
-        assertSame(currencyExchange, currencyExchangeResult);
-        verify(exchangeApiClient).exchangeCurrency(any(),any(),any());
+    @Test
+    void testExchangeSend() {
+        //given
+        CurrencyExchangeCommand command = new CurrencyExchangeCommand();
+        command.setFrom("EUR");
+        command.setTo("PLN");
+        command.setAmount("100");
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo("test");
+        message.setSubject("Wymiana walut " + LocalDate.now());
+        message.setText("Wymieniono: " + command.getAmount() + " " + command.getFrom() +
+                "\nOtrzymano: 400.0 " + command.getTo());
+
+        CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(),
+                new CurrencyExchange.Query("PLN", "EUR", "100"), 400, null);
+
+        when(exchangeApiClient.exchangeCurrency(any(String.class), any(String.class), any(String.class)))
+                .thenReturn(currencyExchange);
+
+        //when
+        CurrencyExchange returned = exchangeService.exchangeSend("test", command);
+
+        //then
+        assertEquals(currencyExchange.getResult(), returned.getResult());
+        verify(emailService).sendExchangeCurrencyMessage("test", currencyExchange);
     }
 }

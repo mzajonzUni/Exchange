@@ -2,53 +2,73 @@ package pl.zajonz.exchange.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import pl.zajonz.exchange.model.AvailableCurrencies;
+import pl.zajonz.exchange.model.CurrencyExchange;
 import pl.zajonz.exchange.model.command.CurrencyExchangeCommand;
+import pl.zajonz.exchange.service.ExchangeServiceImpl;
+
+import java.time.LocalDate;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-public class ExchangeControllerTest {
+@WebMvcTest(ExchangeController.class)
+public class ExchangeControllerMockBeanTest {
 
     @Autowired
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+    @MockBean
+    private ExchangeServiceImpl exchangeService;
+    @MockBean
+    private AvailableCurrencies availableCurrencies;
+
 
     @Test
-    void testFindAllCurrencies() throws Exception
-    {
+    void testFindAllCurrencies() throws Exception {
+        //given
+        Map<String, String> currencies = Map.of("PLN", "Poland", "EUR", "Euro");
+        AvailableCurrencies availableCurrencies = new AvailableCurrencies(true, currencies);
+        when(exchangeService.getAllCurrencies()).thenReturn(availableCurrencies);
+
+        //when //then
         mockMvc.perform(get("/api/v1/exchange/currencies"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", equalTo(true)))
-                .andExpect(jsonPath("$.symbols.AED", equalTo("United Arab Emirates Dirham")));
+                .andExpect(jsonPath("$.symbols.PLN", equalTo("Poland")));
     }
 
     @Test
-    void testConvertCurrency() throws Exception
-    {
+    public void testConvertCurrency() throws Exception {
+        //given
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
         command.setFrom("PLN");
-        command.setTo("USD");
+        command.setTo("EUR");
         command.setAmount("100");
+        CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(),
+                new CurrencyExchange.Query("PLN", "EUR", "100"), 400,
+                new CurrencyExchange.CurrencyExchangeInfo(1, 4.7));
 
-        mockMvc.perform(
-                        get("/api/v1/exchange/convert")
+        when(exchangeService.exchangeCurrency(command)).thenReturn(currencyExchange);
+        when(availableCurrencies.getSymbols()).thenReturn(Map.of("PLN", "Poland", "EUR", "Europe"));
+
+        //when //then
+        mockMvc.perform(get("/api/v1/exchange/convert")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(command))
-                )
+                        .content(objectMapper.writeValueAsString(command)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", equalTo(true)))
@@ -58,15 +78,17 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testConvertCurrencyValidationFailedLackOfBodyParams() throws Exception
-    {
+    public void testConvertCurrencyValidationFailedLackOfBodyParams() throws Exception {
+        //given
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
 
+        when(availableCurrencies.getSymbols()).thenReturn(Map.of("PLN", "Poland", "EUR", "Europe"));
+
+        //when //then
         mockMvc.perform(
                         get("/api/v1/exchange/convert")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(command))
-                )
+                                .content(objectMapper.writeValueAsString(command)))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$", notNullValue()))
@@ -79,13 +101,16 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testConvertCurrencyValidationFailedCurrencyNotExist() throws Exception
-    {
+    public void testConvertCurrencyValidationFailedCurrencyNotExist() throws Exception {
+        //given
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
         command.setFrom("ASD");
         command.setTo("GHE");
         command.setAmount("100");
 
+        when(availableCurrencies.getSymbols()).thenReturn(Map.of("PLN", "Poland", "EUR", "Europe"));
+
+        //when //then
         mockMvc.perform(
                         get("/api/v1/exchange/convert")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -102,14 +127,22 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testExchangeSend() throws Exception{
+    void testExchangeSend() throws Exception {
+        //given
+        String email = "test@gmail.com";
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
-        command.setFrom("EUR");
-        command.setTo("PLN");
+        command.setFrom("PLN");
+        command.setTo("EUR");
         command.setAmount("100");
+        CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(),
+                new CurrencyExchange.Query("PLN", "EUR", "100"), 400,
+                new CurrencyExchange.CurrencyExchangeInfo(1, 4.7));
 
-        mockMvc.perform(
-                get("/api/v1/exchange/mateuszzajonz@gmail.com")
+        when(exchangeService.exchangeSend(email, command)).thenReturn(currencyExchange);
+        when(availableCurrencies.getSymbols()).thenReturn(Map.of("PLN", "Poland", "EUR", "Europe"));
+
+        //when //then
+        mockMvc.perform(get("/api/v1/exchange/" + email)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(command)))
                 .andDo(print())

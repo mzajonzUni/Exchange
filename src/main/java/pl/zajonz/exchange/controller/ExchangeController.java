@@ -24,8 +24,14 @@ public class ExchangeController {
     // TODO: 16.03.2023 dodać endpoint który przyjmie zapytanie o wymianę walut
     //  - przyjmujemy pola from, to, amount (w formie body Query)
 
-    @PostMapping("/convert")
+    @GetMapping("/convert")
     public CurrencyExchange exchangeCurrency(@RequestBody @Valid CurrencyExchangeCommand command) {
         return exchangeService.exchangeCurrency(command);
+    }
+
+    @GetMapping("/{email}")
+    public CurrencyExchange exchangeSend(@PathVariable String email,
+                                             @RequestBody @Valid CurrencyExchangeCommand command){
+        return exchangeService.exchangeSend(email,command);
     }
 }
