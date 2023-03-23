@@ -13,7 +13,6 @@ public class ExchangeServiceImpl implements ExchangeService {
 
     private final AvailableCurrencies availableCurrencies;
     private final ExchangeApiClient exchangeApiClient;
-
     private final EmailServiceImpl emailService;
 
     @Override
@@ -23,7 +22,14 @@ public class ExchangeServiceImpl implements ExchangeService {
 
     @Override
     public CurrencyExchange exchangeCurrency(CurrencyExchangeCommand command) {
-        emailService.sendSimpleMessage("bartekciura87@gmail.com", "Test", "Turbo");
         return exchangeApiClient.exchangeCurrency(command.getFrom(), command.getTo(), command.getAmount());
+    }
+
+    @Override
+    public CurrencyExchange exchangeSend(String email, CurrencyExchangeCommand command) {
+        CurrencyExchange currencyExchange = exchangeApiClient.exchangeCurrency(command.getFrom(),
+                command.getTo(), command.getAmount());
+       emailService.sendExchangeCurrencyMessage(email, currencyExchange);
+       return currencyExchange;
     }
 }
