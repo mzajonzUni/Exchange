@@ -1,6 +1,7 @@
 package pl.zajonz.exchange.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 import pl.zajonz.exchange.model.AvailableCurrencies;
 import pl.zajonz.exchange.model.CurrencyExchange;
@@ -24,11 +25,13 @@ public class ExchangeController {
     // TODO: 16.03.2023 dodać endpoint który przyjmie zapytanie o wymianę walut
     //  - przyjmujemy pola from, to, amount (w formie body Query)
 
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/convert")
     public CurrencyExchange exchangeCurrency(@RequestBody @Valid CurrencyExchangeCommand command) {
         return exchangeService.exchangeCurrency(command);
     }
 
+    @Secured({"ROLE_ADMIN"})
     @GetMapping("/{email}")
     public CurrencyExchange exchangeSend(@PathVariable String email,
                                              @RequestBody @Valid CurrencyExchangeCommand command){

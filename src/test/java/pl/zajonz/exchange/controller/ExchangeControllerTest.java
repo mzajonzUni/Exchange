@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.zajonz.exchange.model.command.CurrencyExchangeCommand;
@@ -19,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@WithMockUser(username = "JanKo", password = "TwojaStara", roles = "ADMIN")
 public class ExchangeControllerTest {
 
     @Autowired
@@ -27,8 +29,7 @@ public class ExchangeControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void testFindAllCurrencies() throws Exception
-    {
+    void testFindAllCurrencies() throws Exception {
         mockMvc.perform(get("/api/v1/exchange/currencies"))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -37,8 +38,7 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testConvertCurrency() throws Exception
-    {
+    void testConvertCurrency() throws Exception {
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
         command.setFrom("PLN");
         command.setTo("USD");
@@ -46,8 +46,8 @@ public class ExchangeControllerTest {
 
         mockMvc.perform(
                         get("/api/v1/exchange/convert")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(command))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(command))
                 )
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -58,8 +58,7 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testConvertCurrencyValidationFailedLackOfBodyParams() throws Exception
-    {
+    void testConvertCurrencyValidationFailedLackOfBodyParams() throws Exception {
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
 
         mockMvc.perform(
@@ -79,8 +78,7 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testConvertCurrencyValidationFailedCurrencyNotExist() throws Exception
-    {
+    void testConvertCurrencyValidationFailedCurrencyNotExist() throws Exception {
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
         command.setFrom("ASD");
         command.setTo("GHE");
@@ -102,16 +100,16 @@ public class ExchangeControllerTest {
     }
 
     @Test
-    void testExchangeSend() throws Exception{
+    void testExchangeSend() throws Exception {
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
         command.setFrom("EUR");
         command.setTo("PLN");
         command.setAmount("100");
 
         mockMvc.perform(
-                get("/api/v1/exchange/mateuszzajonz@gmail.com")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(command)))
+                        get("/api/v1/exchange/mateuszzajonz@gmail.com")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(command)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", equalTo(true)))
