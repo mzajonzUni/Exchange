@@ -7,6 +7,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.zajonz.exchange.client.ExchangeApiClient;
@@ -19,9 +21,9 @@ import java.time.LocalDate;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,8 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@WithMockUser(username = "JanKo", password = "TwojaStara", roles = "ADMIN")
-public class ExchangeControllerMockBeanTest {
+public class SecurityExchangeControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,29 +44,30 @@ public class ExchangeControllerMockBeanTest {
     @MockBean
     private EmailServiceImpl emailService;
 
-
     @Test
-    void testFindAllCurrencies() throws Exception {
-        //given
-        Map<String, String> currencies = Map.of("PLN", "Poland", "EUR", "Euro");
-        AvailableCurrencies availableCurr = new AvailableCurrencies(true, currencies);
-        when(exchangeApiClient.getCurrencies()).thenReturn(availableCurr);
-
-        //when //then
-        mockMvc.perform(get("/api/v1/exchange/currencies"))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success", equalTo(true)))
-                .andExpect(jsonPath("$.symbols.PLN", equalTo("Poland")));
-    }
-
-    @Test
-    public void testConvertCurrency() throws Exception {
+    public void testConvertCurrency_ShouldReturnUnauthorized() throws Exception {
         //given
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
         command.setFrom("PLN");
         command.setTo("EUR");
         command.setAmount("100");
+
+        //when //then
+        mockMvc.perform(get("/api/v1/exchange/convert")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(command)))
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
+    }
+    @Test
+    @WithMockUser(username = "Matt", password = "Ka", roles = "ADMIN")
+    public void testConvertCurrency_TestWithAdmin() throws Exception {
+        //given
+        CurrencyExchangeCommand command = new CurrencyExchangeCommand();
+        command.setFrom("PLN");
+        command.setTo("EUR");
+        command.setAmount("100");
+
         CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(),
                 new CurrencyExchange.Query("PLN", "EUR", "100"), 400,
                 new CurrencyExchange.CurrencyExchangeInfo(1, 4.7));
@@ -87,52 +89,76 @@ public class ExchangeControllerMockBeanTest {
     }
 
     @Test
-    public void testConvertCurrencyValidationFailedLackOfBodyParams() throws Exception {
+    @WithMockUser(username = "JanKo", password = "TwojaStara", roles = "USER")
+    public void testConvertCurrency_TestWithUser() throws Exception {
         //given
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
+        command.setFrom("PLN");
+        command.setTo("EUR");
+        command.setAmount("100");
+
+        CurrencyExchange currencyExchange = new CurrencyExchange(true, LocalDate.now(),
+                new CurrencyExchange.Query("PLN", "EUR", "100"), 400,
+                new CurrencyExchange.CurrencyExchangeInfo(1, 4.7));
+
+        when(exchangeApiClient.exchangeCurrency(any(String.class), any(String.class),
+                any(String.class))).thenReturn(currencyExchange);
+        when(availableCurrencies.getSymbols()).thenReturn(Map.of("PLN", "Poland", "EUR", "Europe"));
 
         //when //then
-        mockMvc.perform(
-                        get("/api/v1/exchange/convert")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(command)))
+        mockMvc.perform(get("/api/v1/exchange/convert")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(command)))
                 .andDo(print())
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$", notNullValue()))
-                .andExpect(jsonPath("$.message", equalTo("Validation errors")))
-                .andExpect(jsonPath("$.violations").isArray())
-                .andExpect(jsonPath("$.violations[*].field",
-                        containsInAnyOrder("to", "from", "amount")))
-                .andExpect(jsonPath("$.violations[*].message",
-                        containsInAnyOrder("must not be blank", "must not be blank", "must not be blank")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)))
+                .andExpect(jsonPath("$.result", notNullValue()))
+                .andExpect(jsonPath("$.info.timestamp", notNullValue()))
+                .andExpect(jsonPath("$.info.rate", notNullValue()));
     }
 
     @Test
-    public void testConvertCurrencyValidationFailedCurrencyNotExist() throws Exception {
+    void testExchangeSend_ShouldReturnUnauthorized() throws Exception {
         //given
+        String email = "test@gmail.com";
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
-        command.setFrom("ASD");
-        command.setTo("GHE");
+        command.setFrom("PLN");
+        command.setTo("EUR");
         command.setAmount("100");
 
         //when //then
-        mockMvc.perform(
-                        get("/api/v1/exchange/convert")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(command))
-                )
+        mockMvc.perform(get("/api/v1/exchange/" + email)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(command)))
                 .andDo(print())
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$", notNullValue()))
-                .andExpect(jsonPath("$.message", equalTo("Validation errors")))
-                .andExpect(jsonPath("$.violations").isArray())
-                .andExpect(jsonPath("$.violations[*].field", containsInAnyOrder("to", "from")))
-                .andExpect(jsonPath("$.violations[*].message",
-                        containsInAnyOrder("Currency is not available", "Currency is not available")));
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(emailService);
     }
 
     @Test
-    void testExchangeSend() throws Exception {
+    @WithMockUser(password = "test", username = "test", roles = "USER")
+    void testExchangeSend_TestWithUser_ShouldReturnForbidden() throws Exception {
+        //given
+        String email = "test@gmail.com";
+        CurrencyExchangeCommand command = new CurrencyExchangeCommand();
+        command.setFrom("PLN");
+        command.setTo("EUR");
+        command.setAmount("100");
+
+        when(availableCurrencies.getSymbols()).thenReturn(Map.of("PLN", "Poland", "EUR", "Europe"));
+
+        //when //then
+        mockMvc.perform(get("/api/v1/exchange/" + email)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(command)))
+                .andDo(print())
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    @WithMockUser(password = "test", username = "test", roles = "ADMIN")
+    void testExchangeSend_TestWithAdmin() throws Exception {
         //given
         String email = "test@gmail.com";
         CurrencyExchangeCommand command = new CurrencyExchangeCommand();
@@ -157,6 +183,6 @@ public class ExchangeControllerMockBeanTest {
                 .andExpect(jsonPath("$.result", notNullValue()))
                 .andExpect(jsonPath("$.info.timestamp", notNullValue()))
                 .andExpect(jsonPath("$.info.rate", notNullValue()));
-        verify(emailService).sendExchangeCurrencyMessage(email,currencyExchange);
+        verify(emailService).sendExchangeCurrencyMessage(email, currencyExchange);
     }
 }

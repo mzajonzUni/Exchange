@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.SimpleMailMessage;
 import pl.zajonz.exchange.client.ExchangeApiClient;
@@ -28,18 +29,20 @@ public class ExchangeServiceImplTest {
     private ExchangeApiClient exchangeApiClient;
     @Mock
     private EmailServiceImpl emailService;
+    @Spy
+    private AvailableCurrencies availableCurrencies = new AvailableCurrencies(true,
+            Map.of("PLN", "Poland", "EUR", "Euro"));
 
     @Test
     void testGetAllCurrencies() {
         //given
         Map<String, String> currencies = Map.of("PLN", "Poland", "EUR", "Euro");
-        AvailableCurrencies availableCurr = new AvailableCurrencies(true, currencies);
 
         //when
         AvailableCurrencies returned = exchangeService.getAllCurrencies();
 
         //then
-        assertEquals(availableCurr.getSymbols(), returned.getSymbols());
+        assertEquals(currencies, returned.getSymbols());
     }
 
     @Test
